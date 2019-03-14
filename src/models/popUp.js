@@ -7,8 +7,10 @@ const popUpModel = {
     2,
     1,
     3,
-    5,
+    6,
     8,
+    1,
+    1,
     1],  
 
      rulesetMaker:
@@ -18,7 +20,9 @@ const popUpModel = {
             coeffForm, 
             coeffClassOrId, 
             coeffCentered,
-            coeffIsNearOverlay]) {
+            coeffIsNearOverlay,
+            coeffAbsolutePosition,
+            coeffZIndex]) {
 
             const ZEROISH = .08;
             const ONEISH = .9;
@@ -194,10 +198,36 @@ const popUpModel = {
             // TODO: try making a 1D growth comparator
 
             // TODO: position = absolute or fixed
+            function absolutePosition(fnode) {
+                return ((fnode.element.style.position == "absolute") ? ONEISH : ZEROISH) ** coeffAbsolutePosition;
+            }
             // TODO: align items: centered
 
-            // TODO: try z-index again
 
+
+            // TODO: try z-index again
+            
+            function getMaxZIndex() {
+                console.log('should only go into this once???');
+                 return Array.from(document.querySelectorAll('body *'))
+                       .map(a => parseFloat(window.getComputedStyle(a).zIndex))
+                       .filter(a => !isNaN(a))
+                       .sort()
+                       .pop();
+            }
+
+            function inheritedZIndex(fnode){
+                //maybe use a 'note' in the root element. there's a get root element util function
+                if(!window.maxZ){
+                    window.maxZ = getMaxZIndex();
+                }
+                for (const e of ancestors(fnode.element)){
+                    if (window.getComputedStyle(e).zIndex !== 'auto'){
+                        return trapezoid(window.getComputedStyle(e).zIndex, 0, window.maxZ) ** coeffZIndex;
+                    }
+                }
+                return ZEROISH;
+            }
             // TODO: try border
 
             // TODO: click in the middle of the page, make a note on it, and maybe try to traverse to it 
@@ -237,6 +267,7 @@ const popUpModel = {
                         j++;
                     }
                 }
+                // comparedocumentposition
 
                 return (candidates.length < 1) ? ZEROISH :  (1-logisticFn(Math.min(candidates))) ** coeffForm;
             }
@@ -326,6 +357,8 @@ const popUpModel = {
                 rule(type('popUp'), score(containsForm)),
                 rule(type('popUp'), score(isCentered)),
                 // rule(type('popUp'), score(buttons)),
+                rule(type('popUp'), score(absolutePosition)),
+                rule(type('popUp'), score(inheritedZIndex)),
                 rule(type('popUp'), score(isNearOverlay)),
 
                 rule(type('popUp').max(), out('popUp')),
