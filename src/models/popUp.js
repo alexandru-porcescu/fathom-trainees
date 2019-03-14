@@ -3,10 +3,22 @@ import {ancestors} from 'fathom-web/utilsForFrontend';
 import {euclidean} from 'fathom-web/clusters';
 
 const popUpModel = {
-    coeffs: [2,2,1,2,2,1],  
+    coeffs: [
+    2,
+    1,
+    3,
+    5,
+    8,
+    1],  
 
      rulesetMaker:
-        function ([coeffAncestorArea, coeffForm, coeffClassOrId, coeffCentered, coeffButton, coeffIsNearOverlay]) {
+        function ([
+            coeffAncestorArea,
+            coeffAncestorRelArea,
+            coeffForm, 
+            coeffClassOrId, 
+            coeffCentered,
+            coeffIsNearOverlay]) {
 
             const ZEROISH = .08;
             const ONEISH = .9;
@@ -146,7 +158,7 @@ const popUpModel = {
                 return fnode._ruleset.get('overlay')[0]; 
             }
 
-
+            // might be good for sigmoid (i.e. at least 100 pixels diff to a fnode's container)
             function largeAncestor(fnode) {
                 const element = fnode.element;
                 const ancestor = element.parentElement;
@@ -160,40 +172,73 @@ const popUpModel = {
                 const windowArea = window.innerWidth * window.innerHeight;
                 const areaDiff = ancestorArea - elementArea;
 
-                return (trapezoid(areaDiff, 0, windowArea)+1) ** coeffAncestorArea;
+                return (trapezoid(areaDiff, 0, windowArea)) ** coeffAncestorArea;
             }
+
+            function largestAncestorRel(fnode){
+                const element = fnode.element;
+                const ancestor = element.parentElement;
+
+                const elementRect = element.getBoundingClientRect();
+                const ancestorRect = ancestor.getBoundingClientRect();
+
+                const elementArea = elementRect.width * elementRect.height;
+                const ancestorArea = ancestorRect.width * ancestorRect.height;
+
+                const windowArea = window.innerWidth * window.innerHeight;
+                const areaDiff = ancestorArea - elementArea;
+
+                return (trapezoid(areaDiff, 0, ancestorArea)) ** coeffAncestorRelArea;
+            }
+
+            // TODO: try making a 1D growth comparator
+
+            // TODO: position = absolute or fixed
+            // TODO: align items: centered
+
+            // TODO: try z-index again
+
+            // TODO: try border
+
+            // TODO: click in the middle of the page, make a note on it, and maybe try to traverse to it 
+            //document.element.frompoint
 
             function isCentered(fnode) {
                 const element = fnode.element;
                 const rect = element.getBoundingClientRect();
 
+                // use centerpoint of element instead
+
                 const leftDiff = rect.x;
+                //use rect.right
                 const rightDiff = window.innerWidth - rect.x - rect.width;
 
                 const ratio = Math.min(leftDiff, rightDiff)/Math.max(leftDiff, rightDiff);
 
-                const logisticFunction = logisticFuncGenerator(1,0.8, 30, 1);
+                //maxVal, xMid, growthRate, yInt = 0)
+                const logisticFunction = logisticFuncGenerator(1,0.8, 30, 0);
                 return logisticFunction(ratio) ** coeffCentered;
             }
 
-            // exponentially decrease each level's score multiplier
             function containsForm(fnode) {
                 const element = fnode.element;
-                let queue = [element];
-                let formMultiplier = 1;
 
-                for (let i = 1; i < 5; i++){
-                    let nextQueue = [];
-                    while (queue.length > 0){
-                        let e = queue.pop();
-                        nextQueue = nextQueue.concat(Array.from(e.children));
-                        if (e.nodeName === "FORM"){
-                            formMultiplier = formMultiplier * (1+coeffForm/i);
+                const logisticFn = logisticFuncGenerator(1, 5, 10);
+
+                let forms = document.forms;
+                let candidates = [];
+                for (var i = 0; i < forms.length; i++) {
+                    let j = 0;
+                    for (const ancestor of ancestors(forms[i])) {
+                        if (ancestor == element){
+                            candidates.push(j);
+                            break;
                         }
+                        j++;
                     }
-                    queue = nextQueue;
                 }
-                return formMultiplier;
+
+                return (candidates.length < 1) ? ZEROISH :  (1-logisticFn(Math.min(candidates))) ** coeffForm;
             }
 
 
