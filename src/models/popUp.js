@@ -11,6 +11,7 @@ const popUpModel = {
     8,
     1,
     1,
+    1,
     1],  
 
      rulesetMaker:
@@ -22,7 +23,8 @@ const popUpModel = {
             coeffCentered,
             coeffIsNearOverlay,
             coeffAbsolutePosition,
-            coeffZIndex]) {
+            coeffZIndex,
+            coeffContainedByOverlay]) {
 
             const ZEROISH = .08;
             const ONEISH = .9;
@@ -158,6 +160,19 @@ const popUpModel = {
                 const overlayFnode = getHighestScoringOverlay(fnode); 
                 return linearScale(euclidean(fnode, overlayFnode), 1000, 0) ** coeffIsNearOverlay;
             }
+
+            function containedByOverlay(fnode){
+                const popup = fnode.element;                
+                const overlayFnode = getHighestScoringOverlay(fnode); 
+
+                const position = popup.compareDocumentPosition(overlayFnode.element);
+                if (position & popup.DOCUMENT_POSITION_CONTAINED_BY) {
+                    return ONEISH ** coeffContainedByOverlay;
+                }
+
+                return ZEROISH ** coeffContainedByOverlay;
+            }
+
             function getHighestScoringOverlay(fnode) {
                 return fnode._ruleset.get('overlay')[0]; 
             }
@@ -360,6 +375,8 @@ const popUpModel = {
                 rule(type('popUp'), score(absolutePosition)),
                 rule(type('popUp'), score(inheritedZIndex)),
                 rule(type('popUp'), score(isNearOverlay)),
+                rule(type('popUp'), score(containedByOverlay)),
+
 
                 rule(type('popUp').max(), out('popUp')),
 
