@@ -1,11 +1,12 @@
 import {ruleset, rule, dom, type, score, out} from 'fathom-web';
 import {ancestors} from 'fathom-web/utilsForFrontend';
 
-const closeButtonModel = {coeffs: [1,1,1,1,1,1,1,1],
+const closeButtonModel = {coeffs: [3,1,1,1,2,1,2,1,4],
+// const closeButtonModel = {coeffs: [1],
 
      rulesetMaker:
 
-        function ([coeffSmall, coeffSquare, coeffTopHalfPage, coeffAbsolutePosition, coeffCloseString, coeffModalString, coeffHiddenString, coeffVisible]) {
+        function ([coeffSmall, coeffSquare, coeffTopHalfPage, coeffAbsolutePosition, coeffCloseString, coeffModalString, coeffHiddenString, coeffSusElementText, coeffVisible]) {
             
             const ZEROISH = .08;
             
@@ -15,8 +16,9 @@ const closeButtonModel = {coeffs: [1,1,1,1,1,1,1,1],
                 const rect = fnode.element.getBoundingClientRect();
                 const size = Math.abs(rect.height + rect.width);
                 const lowerBound = 25;
-                const upperBound = 150;
+                const upperBound = 125;
 
+                //return trapezoid(size, lowerBound, upperBound) ** coeffSmall
                 return ((size >= lowerBound && size <= upperBound) ? ONEISH : ZEROISH) ** coeffSmall;
             }
 
@@ -35,12 +37,6 @@ const closeButtonModel = {coeffs: [1,1,1,1,1,1,1,1],
                 return trapezoid(ratio, lowerBound, upperBound) ** coeffSquare;
             }
 
-            // Function isn't working; How can I tell the diference between a 'div' and 'button' tag?
-            function onClick(fnode) {
-                //console.log(fnode.element.tagName == 'button');
-                return ((fnode.element.hasAttribute("onclick")) ? ONEISH : ZEROISH) ** coeffOnClick;
-            }
-
             function topHalfPage(fnode) {
                 const rect = fnode.element.getBoundingClientRect();
                 const windowHeight = window.innerHeight;
@@ -48,15 +44,15 @@ const closeButtonModel = {coeffs: [1,1,1,1,1,1,1,1],
                 return ((rect.top <= windowHeight/2) ? ONEISH : ZEROISH) ** coeffTopHalfPage;
             }
             
-            function largeZIndex(fnode) {
-                const lowerBound = 0;
-                const upperBound = 1000;
+            // function largeZIndex(fnode) {
+            //     const lowerBound = 0;
+            //     const upperBound = 1000;
 
-                return trapezoid(fnode.element.style.zIndex, lowerBound, upperBound) ** coeffZIndex;
-            }
+            //     return trapezoid(window.getComputedStyle(fnode.element).getPropertyValue("z-index"), lowerBound, upperBound) ** coeffZIndex;
+            // }
 
             function absolutePosition(fnode) {
-                return ((fnode.element.style.position == "absolute") ? ONEISH : ZEROISH) ** coeffAbsolutePosition;
+                return ((window.getComputedStyle(fnode.element).getPropertyValue("position") == "absolute") ? ONEISH : ZEROISH) ** coeffAbsolutePosition;
             }
 
             /*
@@ -136,7 +132,7 @@ const closeButtonModel = {coeffs: [1,1,1,1,1,1,1,1],
                 const attributeNames = ['class', 'id'];
                 let numOccurences = 0;
                 function numberOfSuspiciousSubstrings(value) {
-                    return value.includes('hidden');
+                    return value.includes('hidden') + value.includes('continue') + value.includes('decline');
                 }
 
                 for (const name of attributeNames) {
@@ -153,6 +149,40 @@ const closeButtonModel = {coeffs: [1,1,1,1,1,1,1,1],
 
                 // Function is Equivalent to 0.9 - 0.38^(0.1685 + numOccurences)
                 return (-((.3 + ZEROISH) ** (numOccurences + .1685)) + ONEISH) ** coeffHiddenString;
+            }
+
+            function suspiciousElementText(fnode) {
+                const element = fnode.element;
+                var childNode = element.childNodes;
+
+                if(childNode.length > 0) {
+                    return ((checkForSusText(childNode)) ? ONEISH : ZEROISH) ** coeffSusElementText;
+                }
+
+                // if (checkForSusText(element)) {
+                //     var childNode = element.firstChild;
+                //     console.log("Found in first")
+                //     return ((checkForSusText(childNode)) ? ZEROISH : ONEISH) ** coeffSusElementText;
+                // }
+            }
+
+            function checkForSusText(element) {
+                // No child element
+                if (element[0].nodeValue == null) {
+                    console.log("null")
+                    return false;
+                }
+
+                const suspiciousStrings = ["no thanks", "don't show again", "close", "exit", "dismiss", "not interested", "not now", "decline"];
+                var text = element[0].nodeValue;
+
+                for (const susText of suspiciousStrings) {
+                    if (text.toLowerCase().includes(susText)) {
+                        console.log(text)
+                        return true;
+                    }
+                }
+                return false;
             }
 
             /*
@@ -244,14 +274,12 @@ const closeButtonModel = {coeffs: [1,1,1,1,1,1,1,1],
                 rule(dom('div,button,a,i,span'), type('closeButton')),
                 rule(type('closeButton'), score(small)),
                 rule(type('closeButton'), score(square)),
-                //rule(type('closeButton'), score(onClick)),
                 rule(type('closeButton'), score(topHalfPage)),
-                //rule(type('closeButton'), score(zIndex)),
                 rule(type('closeButton'), score(absolutePosition)),
-                //rule(type('closeButton'), score(suspiciousClassOrId)),
                 rule(type('closeButton'), score(containsClose)),
                 rule(type('closeButton'), score(containsModal)),
                 rule(type('closeButton'), score(containsHidden)),
+                rule(type('closeButton'), score(suspiciousElementText)),
                 rule(type('closeButton'), score(visible)),
                 rule(type('closeButton').max(), out('closeButton'))
             );
