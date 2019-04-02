@@ -4,15 +4,15 @@ import {euclidean} from 'fathom-web/clusters';
 
 const popUpModel = {
     coeffs: [
-    2,
-    1,
     3,
     6,
-    8,
-    1,
-    1,
-    1,
-    1],  
+    2,
+    3,
+    4,
+    0,
+    0,
+    0,
+    -4],  
 
      rulesetMaker:
         function ([
