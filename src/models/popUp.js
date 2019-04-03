@@ -1,6 +1,7 @@
 import {ruleset, rule, dom, type, score, out} from 'fathom-web';
 import {ancestors} from 'fathom-web/utilsForFrontend';
 import {euclidean} from 'fathom-web/clusters';
+import * as overlay from './overlay.js';
 
 const popUpModel = {
     coeffs: [
