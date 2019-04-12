@@ -42,6 +42,12 @@ function trapezoid(number, zeroAt, oneAt) {
     return slope * (number - zeroAt) + ZEROISH;
 }
 
+// returns a logistic function. Ideally we should input the growth rate as
+// a hyperparameter from the optimization
+function logisticFuncGenerator(maxVal, xMid, growthRate, yInt = 0){
+    return x=> ((maxVal)/(1+Math.exp(-1*growthRate*(x-xMid)))+yInt);
+}
+
 /**
  * Return the extracted [r, g, b, a] values from a string like "rgba(0, 5, 255, 0.8)",
  * and scale them to 0..1. If no alpha is specified, return undefined for it.
@@ -68,8 +74,18 @@ function saturation(r, g, b) {
     return (denom === 0) ? 0 : delta / denom;
 }
 
+function getMaxZIndex() {
+     return Array.from(document.querySelectorAll('body *'))
+           .map(a => parseFloat(window.getComputedStyle(a).zIndex))
+           .filter(a => !isNaN(a))
+           .sort()
+           .pop();
+}
+
 export {
     trapezoid as trapezoid, 
+    logisticFuncGenerator as logisticFuncGenerator,
+    getMaxZIndex as getMaxZIndex,
     rgbaFromString as rgba,
     saturation as saturation,
     ONEISH as ONEISH, 
